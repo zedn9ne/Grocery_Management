@@ -5,6 +5,7 @@ from tkcalendar import Calendar
 from tkinter import ttk
 from tkinter import messagebox
 from datetime import datetime
+import random
 
 root = tk.Tk()
 root.title("Grocery Management")
@@ -19,6 +20,12 @@ cur.execute('''CREATE TABLE IF NOT EXISTS shop(
             sell INT ,
             buy INT,
             count INT);''');
+
+cur.execute('''CREATE TABLE IF NOT EXISTS invoice(
+            id  PRIMARY KEY ,
+            date text ,
+            count INT ,
+            total INT);''');
 
 con.commit()
 
@@ -182,8 +189,6 @@ class Shop :
         
 # Sell Page
 def sellPage():
-    def getdate ():
-        print(cal.get_date())
     sell_frame = tk.Frame(bg="alice blue")
     sell_frame.place(x = 0 , y = 0 , width=1000 , height= 800)
     
@@ -210,8 +215,12 @@ def sellPage():
     date_label.place( x = 90 , y = 190)
     
     # Add to Cart Button
-    addCart = tk.Button(sell_frame , text="اضافه به سبد خرید" , font = ("Arial" , 20) , bg = "Green" , command=getdate)
+    addCart = tk.Button(sell_frame , text="اضافه به سبد خرید" , font = ("Arial" , 20) , bg = "Green" , command=sellApp.addCart)
     addCart.place(x = 180 , y = 450 )
+
+    # Add to Cart Button
+    deleteCart = tk.Button(sell_frame , text="حذف سبد خرید" , font = ("Arial" , 20) , bg = "red3" , command=sellApp.deleteCart)
+    deleteCart.place(x = 180 , y = 520 , width=191)
     
     #  Final Invoice
     invoiceBtn = tk.Button(sell_frame , text = "فاکتور نهایی" , font=("" , 20) , bg="Orange")
@@ -219,10 +228,19 @@ def sellPage():
     
     #  Invoice Display
     scroll = tk.Scrollbar(sell_frame)
+    global textBox
     textBox = tk.Text(sell_frame  , font = ("Arial" , 16), yscrollcommand=scroll.set)
     textBox.place(x = 450 , y = 50 ,width = 500 , height = 500 )
     scroll.place(x= 950 , y = 50 , width = 30 , height = 500)
     scroll.configure(command=textBox.yview)
+    
+          
+    textBox.insert("end" , "                   به سوپر مارکت ولیعصر خوش آمدید");
+    textBox.insert("end" , "                                                      فاکتور فروش");
+    textBox.insert("end" , "                                          =====================================");
+    textBox.insert("end" , "                    نام کالا                  تعداد                   قیمت");
+    textBox.insert("end" , "\n");
+    textBox.insert("end" , "\n");
     
     # Back
     backBtn = tk.Button(sell_frame , text= "بازگشت" , font=("" , 20) , bg = "Grey" , command=homePage)
@@ -231,16 +249,45 @@ def sellPage():
 # Sell Function
 class sellApp:
     def addCart ():
+        # data for making an invoice table
         product = productInput.get()
-        count = countInput.get()
-        cur.execute('''SELECT FROM shop WHERE name = ?;''' , (product,))
-        result = cur.fetchall()
+        count = int(countInput.get())
+        date = cal.get_date()
+        # Uuid 
+        i = random.randint(10000 , 99999)
+        Uuid = f'#B{i}'
         
+        # getting price and amount of stock
+        cur.execute('''SELECT * FROM shop WHERE name = ?;''' , (product,))
+        result = cur.fetchall()
+
+        for p in result:
+            price = p[1] * count;
+            Inventory_amount = p[3]
+        
+        current_amount = Inventory_amount - count;
+        prices = []
         if not result :
-            messagebox.showerror("erorr" , "")
+            messagebox.showerror("erorr" , "اطلاعات وارد شده نادرست است!")
+        if count > Inventory_amount :
+            messagebox.showerror("error" , f"مقدار انتخاب شده بیش از موجودی انبار می باشد \n                       موجودی: {Inventory_amount}")
         else:
+            # if textBox.get('1.0' , 'end-1c'):
+            #     textBox.delete('4.0' , "end");
+
+            textBox.insert("end" , f"                 {product}                {count}              {price}");
+            textBox.insert("end" , "\n");
+            textBox.insert("end" , "\n");
+            productInput.delete("0" , "end")
+            countInput.delete("0" , "end")
+
+            prices.append(price)
+            print(prices)
             
-            
+# Delete from Cart   
+    def deleteCart():
+        textBox.delete("2.0" , "end-1c")
+                   
 # Invoices Page
 def Invoice():
     invoice_frame = tk.Frame(bg = "alice blue")
